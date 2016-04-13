@@ -1,0 +1,48 @@
+# This is a non-operational example demonstrating the use of a Kafka spout.
+
+name: kafka_spout_example
+
+workers: 3
+
+topology:
+
+    - spout:
+        name: kafka-my_topic
+        type: kafka
+        options:
+            # The Kafka topic to stream from.
+            # Required.
+            topic: cep_storm
+
+            # ZooKeeper connection string. Comma-separated list of ZooKeeper
+            # servers.
+            # Required.
+            zk_hosts: 172.17.24.217:2181,172.17.24.218:2181,172.17.24.219:2181
+
+            # Root path in ZooKeeper to store consumer offsets.
+            # Defaults to: /pyleus-kafka-offsets/<topology name>
+            zk_root: /pyleus-kafka-offsets/kafka_spout_example
+
+            # Kafka consumer ID.
+            # Defaults to: pyleus-<topology name>
+            consumer_id: pyleus-kafka_spout_example
+
+            # Whether the initial offset should be that specified by
+            # start_offset_time (true) or the head of the stream (false).
+            # Defaults to false.
+            from_start: false
+
+            # The offset time to start with if from_start is true.
+            # Defaults to the earliest offset time in the stream.
+            start_offset_time: 2147483647
+
+            # support binary data like google protobuf
+            binary_data: true
+    - bolt:
+        name: logger-bolt
+        module: logging_example.logger_bolt
+        tick_freq_secs: 5.0
+        parallelism_hint: 6
+        tasks: 6
+        groupings:
+            - shuffle_grouping: kafka-my_topic
