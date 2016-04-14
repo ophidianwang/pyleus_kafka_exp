@@ -7,7 +7,7 @@ workers: 3
 topology:
 
     - spout:
-        name: kafka-my_topic
+        name: kafka-cep_storm-spout
         type: kafka
         options:
             # The Kafka topic to stream from.
@@ -39,10 +39,29 @@ topology:
             # support binary data like google protobuf
             binary_data: true
     - bolt:
-        name: logger-bolt
-        module: logging_example.logger_bolt
+        name: split-msg-bolt
+        module: kafka_to_mongodb.split_bolt
         tick_freq_secs: 5.0
+        parallelism_hint: 3
+        tasks: 3
+        groupings:
+            - shuffle_grouping: kafka-cep_storm-spout
+    - bolt:
+        name: group-msisdn-bolt
+        module: kafka_to_mongodb.group_bolt
+        tick_freq_secs: 10.0
         parallelism_hint: 6
         tasks: 6
         groupings:
-            - shuffle_grouping: kafka-my_topic
+            - fields_grouping:
+                component: split-msg-bolt
+                fields:
+                    - msisdn
+    - bolt:
+        name: output-mongo-bolt
+        module: kafka_to_mongodb.output_bolt
+        tick_freq_secs: 10.0
+        parallelism_hint: 12
+        tasks: 12
+        groupings:
+            - shuffle_grouping: group-msisdn-bolt
